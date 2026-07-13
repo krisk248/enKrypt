@@ -43,4 +43,17 @@ gpg --batch --pinentry-mode loopback --passphrase test1234 \
 
 gpg --armor --export fixture@example.com > "$DEST/pubkey.asc"
 
+# Also emit a message using GnuPG's proprietary OCB/AEAD packet (type 20), which
+# modern GnuPG produces by default. Best-effort: --force-ocb needs GnuPG 2.4+;
+# if it's unavailable, the corresponding interop test simply skips.
+if printf 'AEAD interop works!\n' \
+     | gpg --batch --yes --armor --trust-model always --force-ocb \
+           --encrypt -r fixture@example.com > "$DEST/aead.asc" 2>/dev/null; then
+  cp "$DEST/seckey.asc" "$DEST/aead-sec.asc"
+  echo "Wrote AEAD fixture."
+else
+  rm -f "$DEST/aead.asc"
+  echo "Skipped AEAD fixture (--force-ocb unsupported by this GnuPG)."
+fi
+
 echo "Wrote fixtures to $DEST"

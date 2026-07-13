@@ -1,8 +1,8 @@
 //! Encrypt / decrypt / sign / verify operations, plus text (clipboard) modes.
 
 use pgp::composed::{
-    CleartextSignedMessage, Deserializable, DetachedSignature, Message, MessageBuilder,
-    SignedPublicKey, SignedPublicSubKey, VerificationResult,
+    CleartextSignedMessage, DecryptionOptions, Deserializable, DetachedSignature, Message,
+    MessageBuilder, SignedPublicKey, SignedPublicSubKey, TheRing, VerificationResult,
 };
 use pgp::crypto::hash::HashAlgorithm;
 use pgp::crypto::sym::SymmetricKeyAlgorithm;
@@ -173,8 +173,20 @@ pub fn decrypt(
     let secret_refs: Vec<&_> = secrets.iter().collect();
 
     let msg = parse_message(data)?;
-    let mut msg = msg
-        .decrypt_with_keys(passwords, secret_refs)
+    // Opt into the widest set of real-world containers so we can read what other
+    // tools actually produce:
+    //  - `enable_gnupg_aead`: GnuPG's proprietary OCB/AEAD packet (type 20),
+    //    which modern GnuPG emits by default for AEAD-capable keys.
+    //  - `enable_legacy`: historical (malleable) SED packets (type 9), for
+    //    decades-old archives.
+    let ring = TheRing {
+        secret_keys: secret_refs,
+        key_passwords: passwords,
+        decrypt_options: DecryptionOptions::new().enable_gnupg_aead().enable_legacy(),
+        ..Default::default()
+    };
+    let (mut msg, _) = msg
+        .decrypt_the_ring(ring, true)
         .map_err(WasmError::from)?;
 
     while msg.is_compressed() {

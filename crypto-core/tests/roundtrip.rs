@@ -221,6 +221,20 @@ fn decrypts_message_created_by_gnupg() {
     assert_eq!(res.data, b"Hello from GnuPG interop!\n");
 }
 
+/// Modern GnuPG emits its proprietary OCB/AEAD packet (type 20) by default for
+/// AEAD-capable keys. Real users have such files, so we must decrypt them.
+#[test]
+fn decrypts_gnupg_aead_message() {
+    let (Some(seckey), Some(msg)) = (read_fixture("aead-sec.asc"), read_fixture("aead.asc")) else {
+        eprintln!("skipping GnuPG AEAD interop: fixtures absent (run scripts/gen-fixtures.sh)");
+        return;
+    };
+    let seckey = String::from_utf8(seckey).expect("armored secret key is UTF-8");
+    let res = api::decrypt(&msg, vec![seckey], "test1234".into(), vec![])
+        .expect("decrypt GnuPG OCB/AEAD message");
+    assert_eq!(res.data, b"AEAD interop works!\n");
+}
+
 #[test]
 fn parses_gnupg_public_key_metadata() {
     let Some(pubkey) = read_fixture("pubkey.asc") else {
