@@ -1,5 +1,11 @@
 # enKrypt — OpenPGP Privacy Tray
 
+![WebAssembly](https://img.shields.io/badge/WebAssembly-Rust%20%E2%86%92%20WASM-654FF0?logo=webassembly&logoColor=white)
+![Rust](https://img.shields.io/badge/core-Rust%20(rpgp)-000000?logo=rust&logoColor=white)
+![Svelte 5](https://img.shields.io/badge/UI-Svelte%205-FF3E00?logo=svelte&logoColor=white)
+![100% client-side](https://img.shields.io/badge/crypto-100%25%20client--side-0ea5e9)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
+
 A 100% client-side OpenPGP file-encryption web app — a modern, browser-based
 reimagining of **WinPT** (Windows Privacy Tray). All cryptography runs locally in
 your browser via Rust compiled to WebAssembly. **There are zero network calls at
@@ -7,6 +13,68 @@ runtime**: no telemetry, no keyservers, no APIs. Files and keys never leave your
 machine, and the whole thing ships as plain static files you can host anywhere.
 
 <p align="center"><em>Generate & manage keys · Encrypt/decrypt files · Sign/verify · Clipboard text mode · Installable offline PWA</em></p>
+
+---
+
+## 🧩 Built on WebAssembly — and what I learned building it
+
+I built enKrypt to learn **WebAssembly** for real — not a toy "hello world", but a
+genuine, security-critical workload. The **entire OpenPGP engine is Rust compiled
+to `wasm32-unknown-unknown`** and executed in the browser. There is no backend
+doing cryptography; **the WebAssembly module _is_ the crypto.**
+
+> **Why this is the whole point:** because the cryptography runs as WebAssembly on
+> the client, your private keys and files never touch a server — there is no
+> server to touch. That guarantee is only possible *because* of WASM: it lets a
+> mature, pure-Rust OpenPGP library ([`rpgp`](https://crates.io/crates/pgp)) run
+> at near-native speed inside a browser tab, with **zero network calls**.
+
+### How it fits together
+
+```
+ Rust crate (rpgp)  ──wasm-pack──►  enkrypt_core.wasm  ──►  Web Worker  ──►  Svelte 5 UI
+   OpenPGP logic       + wasm-bindgen                     (off main thread)   (typed RPC)
+```
+
+- **Rust → wasm-bindgen → TypeScript, fully typed.** The Rust core exposes a small
+  API and `serde` + `tsify` **generate the `.d.ts`**, so the JavaScript side is
+  type-checked against the Rust structs — no hand-written glue that can drift.
+- **A Web Worker owns the wasm instance.** Keygen (including RSA-4096 and
+  post-quantum, which take seconds) and large-file encryption run off the main
+  thread, so the UI never freezes. Data crosses as **transferable `ArrayBuffer`s**
+  to avoid copies.
+- **Strict CSP with `wasm-unsafe-eval`** — WebAssembly compiles and runs, but
+  arbitrary JavaScript `eval` stays blocked.
+
+### The hard parts I had to solve (the real learning)
+
+Getting a large Rust crypto library to actually _run_ in a browser surfaced
+problems you never hit in a tutorial — this is where most of the learning was:
+
+| Problem | What was really happening | How I fixed it |
+| --- | --- | --- |
+| Every keygen/sign trapped with `unreachable` | rpgp calls `SystemTime::now()`, and `std::time` **panics on `wasm32-unknown-unknown`** — there is no OS clock | Enabled rpgp's `wasm` feature, which swaps in the **`web-time`** crate (a browser clock). The one change that made everything work. |
+| `wasm-opt` refused to optimise the build | rustc emits **bulk-memory** instructions that `wasm-opt` rejects by default | Passed `--enable-bulk-memory` (+ sign-ext, mutable-globals, …) via `Cargo.toml` metadata; `-Oz` then minimises size |
+| The UI froze during key generation | crypto was running on the main thread | Moved all of it into a **Web Worker** behind a small typed request/response RPC layer |
+| Randomness failed in the browser | `getrandom` needs a JS backend on wasm | `getrandom/js` (also pulled in by the `wasm` feature) → `crypto.getRandomValues` |
+
+### Proof it actually works
+
+This isn't a demo that merely compiles — it's verified end-to-end:
+
+- ✅ **Rust tests pass** — keygen, encrypt↔decrypt, sign↔verify, vault, and every
+  algorithm family — and it **decrypts a real message produced by GnuPG 2.4**
+  (true interoperability, not just self-consistency).
+- ✅ **Verified in a real browser**: generated Ed25519 **and post-quantum
+  (ML-DSA-65)** keys and ran a full encrypt→decrypt round-trip *through the
+  worker*, under the strict CSP, with **zero network requests and zero CSP
+  violations**.
+- ✅ Final artifact: **~2.7 MB wasm (~0.87 MB gzipped)** after `wasm-opt -Oz`,
+  precached by a service worker so the app **runs completely offline**.
+
+Curious about the boundary? The generated TypeScript types are in
+`web/src/wasm/enkrypt_core.d.ts`, the Rust exports are in `crypto-core/src/lib.rs`,
+and the worker that drives the wasm is in `web/src/lib/worker/`.
 
 ---
 
