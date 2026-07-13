@@ -38,7 +38,9 @@ jobs:
         run: cargo test
 
       - name: Build wasm
-        run: wasm-pack build crypto-core --target web --release --out-dir web/src/wasm
+        # --out-dir is relative to the crate dir, so build from inside crypto-core.
+        working-directory: crypto-core
+        run: wasm-pack build --target web --release --out-dir ../web/src/wasm
 
       - uses: actions/setup-node@v4
         with:
