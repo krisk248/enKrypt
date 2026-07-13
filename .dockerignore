@@ -1,0 +1,10 @@
+# Keep the build context small and reproducible.
+**/node_modules
+**/target
+web/dist
+web/src/wasm
+**/*.log
+.git
+.github
+*.md
+!README.md

@@ -1,0 +1,24 @@
+# Rust
+crypto-core/target/
+**/*.rs.bk
+
+# Node / web
+web/node_modules/
+web/dist/
+
+# Generated wasm package (build with `just build-wasm`)
+web/src/wasm/
+
+# AI tooling / editor session files (code-only repo)
+.claude/
+.serena/
+.moai/
+
+# GnuPG interop test fixtures contain a throwaway PGP private key — not a real
+# secret, but excluded so no key material is ever committed. Regenerate locally
+# with `scripts/gen-fixtures.sh` (the interop tests skip if absent).
+crypto-core/tests/fixtures/
+
+# Misc
+.DS_Store
+*.log

@@ -1,0 +1,32 @@
+# enKrypt — self-hosted, single container.
+#
+#   docker compose up -d        # build + run   → http://localhost:8080
+#   docker compose up -d --build
+#
+# The container serves only static files; all cryptography runs in the visitor's
+# browser. It needs no volumes, no database, and no outbound network access.
+
+services:
+  enkrypt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: enkrypt:latest
+    container_name: enkrypt
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    # Hardening — the container is a read-only static file server.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

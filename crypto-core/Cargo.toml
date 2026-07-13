@@ -1,0 +1,62 @@
+[package]
+name = "enkrypt-core"
+version = "0.1.0"
+edition = "2021"
+description = "enKrypt OpenPGP crypto core (rpgp) compiled to WebAssembly"
+license = "MIT"
+repository = ""
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# Features:
+#  - `wasm`: use `web-time` (browser clock) + `getrandom/js` so rpgp runs on wasm32.
+#  - `draft-pqc`: post-quantum ML-KEM / ML-DSA / SLH-DSA (future-proof import + gen).
+#  - `large-rsa`: accept/generate RSA keys larger than the default cap.
+#  - `malformed-artifact-compat`: tolerate quirks in old / legacy OpenPGP artifacts.
+# Together these give the widest possible interop: decades-old RSA/DSA/ElGamal and
+# legacy ciphers through to modern Ed25519/X25519 and post-quantum algorithms.
+pgp = { version = "0.20", features = [
+    "wasm",
+    "draft-pqc",
+    "large-rsa",
+    "malformed-artifact-compat",
+] }
+wasm-bindgen = "0.2"
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+serde-wasm-bindgen = "0.6"
+tsify-next = { version = "0.5", features = ["js"] }
+getrandom = { version = "0.2", features = ["js"] }
+rand = "0.8"
+argon2 = "0.5"
+aes-gcm = "0.10"
+zeroize = { version = "1", features = ["derive"] }
+chrono = { version = "0.4", default-features = false, features = ["clock", "wasmbind"] }
+smallvec = "1"
+hex = "0.4"
+rsa = "0.9.10"
+console_error_panic_hook = "0.1"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+# wasm-opt needs modern WebAssembly features enabled explicitly, because rustc's
+# wasm output uses bulk-memory / sign-ext / etc. `-Oz` optimises for size.
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = [
+    "-Oz",
+    "--enable-bulk-memory",
+    "--enable-mutable-globals",
+    "--enable-sign-ext",
+    "--enable-nontrapping-float-to-int",
+    "--enable-reference-types",
+]
