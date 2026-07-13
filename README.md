@@ -14,6 +14,10 @@ machine, and the whole thing ships as plain static files you can host anywhere.
 
 <p align="center"><em>Generate & manage keys · Encrypt/decrypt files · Sign/verify · Clipboard text mode · Installable offline PWA</em></p>
 
+<p align="center">
+  <img src="docs/screenshots/key-manager.png" alt="enKrypt Key Manager — a WinPT-style OpenPGP key manager running entirely in the browser" width="900">
+</p>
+
 ---
 
 ## 🧩 Built on WebAssembly — and what I learned building it
@@ -75,6 +79,33 @@ This isn't a demo that merely compiles — it's verified end-to-end:
 Curious about the boundary? The generated TypeScript types are in
 `web/src/wasm/enkrypt_core.d.ts`, the Rust exports are in `crypto-core/src/lib.rs`,
 and the worker that drives the wasm is in `web/src/lib/worker/`.
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/key-generation.png" alt="Key generation dialog offering Ed25519, RSA, NIST curves, Ed448 and post-quantum ML-KEM/ML-DSA">
+      <p align="center"><em>Generate a key — legacy RSA/NIST through post-quantum, with a live passphrase-strength meter.</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/encrypt.png" alt="Encrypt view with drag-and-drop and recipient selection">
+      <p align="center"><em>Encrypt a file to one or more recipients, optionally signing — all in-browser.</em></p>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <img src="docs/screenshots/text-mode.png" alt="Text / clipboard mode for encrypting and signing messages">
+      <p align="center"><em>Text mode — encrypt, decrypt, clear-sign or verify messages (WinPT's clipboard functions).</em></p>
+    </td>
+    <td width="50%">
+      <img src="docs/screenshots/key-manager.png" alt="Key Manager table with a right-click context menu">
+      <p align="center"><em>The Key Manager — search, right-click actions, and a live status bar.</em></p>
+    </td>
+  </tr>
+</table>
 
 ---
 
